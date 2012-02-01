@@ -82,9 +82,8 @@
     [self.delegate zipWriteStream:self didFinishSuccessfully:YES error:nil];
 }
 
-- (void)stream:(NSStream *)stream handleEvent:(NSStreamEvent)eventCode {
-    NSLog(@"stream:handleEvent: is invoked...");
-    
+- (void)stream:(NSStream *)stream handleEvent:(NSStreamEvent)eventCode
+{    
     switch(eventCode)
     {
         case NSStreamEventErrorOccurred:
