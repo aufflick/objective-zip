@@ -36,9 +36,15 @@
 
 #include "zip.h"
 
+@interface ZipWriteStream ()
+
+- (void)writeBytes:(const void *)bytes length:(unsigned)length;
+
+@end
 
 @implementation ZipWriteStream
 
+@synthesize delegate;
 
 - (id) initWithZipFileStruct:(zipFile)zipFile fileNameInZip:(NSString *)fileNameInZip {
 	if ((self= [super init])) {
@@ -49,20 +55,69 @@
 	return self;
 }
 
-- (void) writeData:(NSData *)data {
-	int err= zipWriteInFileInZip(_zipFile, [data bytes], (unsigned)[data length]);
-	if (err < 0) {
+- (void) writeData:(NSData *)data
+{
+    [self writeBytes:[data bytes] length:(unsigned)[data length]];
+}
+
+- (void)writeBytes:(const void *)bytes length:(unsigned)length
+{
+	int err = zipWriteInFileInZip(_zipFile, bytes, length);
+	if (err < 0)
+    {
 		NSString *reason= [NSString stringWithFormat:@"Error in writing '%@' in the zipfile", _fileNameInZip];
-		@throw [[[ZipException alloc] initWithError:err reason:reason] autorelease];
+        [self.delegate zipWriteStream:self didFinishSuccessfully:NO error:[NSError errorWithDomain:@"objective-zip" code:err userInfo:[NSDictionary dictionaryWithObject:reason forKey:NSLocalizedDescriptionKey]]];
 	}
 }
 
-- (void) finishedWriting {
+- (void) finishedWriting
+{
 	int err= zipCloseFileInZip(_zipFile);
-	if (err != ZIP_OK) {
+	if (err != ZIP_OK)
+    {
 		NSString *reason= [NSString stringWithFormat:@"Error in closing '%@' in the zipfile", _fileNameInZip];
-		@throw [[[ZipException alloc] initWithError:err reason:reason] autorelease];
+        [self.delegate zipWriteStream:self didFinishSuccessfully:NO error:[NSError errorWithDomain:@"objective-zip" code:err userInfo:[NSDictionary dictionaryWithObject:reason forKey:NSLocalizedDescriptionKey]]];
 	}
+    
+    [self.delegate zipWriteStream:self didFinishSuccessfully:YES error:nil];
+}
+
+- (void)stream:(NSStream *)stream handleEvent:(NSStreamEvent)eventCode {
+    NSLog(@"stream:handleEvent: is invoked...");
+    
+    switch(eventCode)
+    {
+        case NSStreamEventErrorOccurred:
+        {
+            [self.delegate zipWriteStream:self didFinishSuccessfully:NO error:[stream streamError]];
+            
+            [stream close];
+            [stream release];
+            break;
+        }
+
+        case NSStreamEventHasBytesAvailable:
+        {
+            uint8_t buf[1024];
+            unsigned int len = 0;
+            len = [(NSInputStream *)stream read:buf maxLength:1024];
+            if(len)
+            {
+                [self writeBytes:buf length:len];
+            }
+            break;
+        }
+
+        case NSStreamEventEndEncountered:
+        {
+            // the class that created the input stream is responsible for closing etc. since
+            // we don't even know what runloop was used etc.
+
+            [self finishedWriting];
+            
+            break;
+        }
+    }
 }
 
 

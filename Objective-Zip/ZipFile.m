@@ -383,13 +383,17 @@
 	return [[[ZipReadStream alloc] initWithUnzFileStruct:_unzFile fileNameInZip:fileNameInZip] autorelease];
 }
 
-- (void) close {
+- (BOOL) closeWithError:(NSError **)error
+{
 	switch (_mode) {
 		case ZipFileModeUnzip: {
 			int err= unzClose(_unzFile);
-			if (err != UNZ_OK) {
+			if (err != UNZ_OK)
+            {
 				NSString *reason= [NSString stringWithFormat:@"Error in closing '%@'", _fileName];
-				@throw [[[ZipException alloc] initWithError:err reason:reason] autorelease];
+                if (error)
+                    *error = [NSError errorWithDomain:@"objective-zip" code:err userInfo:[NSDictionary dictionaryWithObject:reason forKey:NSLocalizedDescriptionKey]];
+				return NO;
 			}
 			break;
 		}
@@ -398,7 +402,9 @@
 			int err= zipClose(_zipFile, NULL);
 			if (err != ZIP_OK) {
 				NSString *reason= [NSString stringWithFormat:@"Error in closing '%@'", _fileName];
-				@throw [[[ZipException alloc] initWithError:err reason:reason] autorelease];
+                if (error)
+                    *error = [NSError errorWithDomain:@"objective-zip" code:err userInfo:[NSDictionary dictionaryWithObject:reason forKey:NSLocalizedDescriptionKey]];
+                return NO;
 			}
 			break;
 		}
@@ -407,17 +413,28 @@
 			int err= zipClose(_zipFile, NULL);
 			if (err != ZIP_OK) {
 				NSString *reason= [NSString stringWithFormat:@"Error in closing '%@'", _fileName];
-				@throw [[[ZipException alloc] initWithError:err reason:reason] autorelease];
+                if (error)
+                    *error = [NSError errorWithDomain:@"objective-zip" code:err userInfo:[NSDictionary dictionaryWithObject:reason forKey:NSLocalizedDescriptionKey]];
+                return NO;
 			}
 			break;
 		}
 
 		default: {
 			NSString *reason= [NSString stringWithFormat:@"Unknown mode %d", _mode];
-			@throw [[[ZipException alloc] initWithReason:reason] autorelease];
+            if (error)
+                *error = [NSError errorWithDomain:@"objective-zip" code:-1 userInfo:[NSDictionary dictionaryWithObject:reason forKey:NSLocalizedDescriptionKey]];
+            return NO;
 		}
 	}
+    
+    return YES;
 }
 
+
+- (NSString *)fileName
+{
+    return _fileName;
+}
 
 @end

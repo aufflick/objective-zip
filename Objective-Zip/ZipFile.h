@@ -63,6 +63,8 @@ typedef enum {
 	unzFile _unzFile;
 }
 
+- (NSString *)fileName; // really path
+
 - (id) initWithFileName:(NSString *)fileName mode:(ZipFileMode)mode;
 
 - (ZipWriteStream *) writeFileInZipWithName:(NSString *)fileNameInZip compressionLevel:(ZipCompressionLevel)compressionLevel;
@@ -81,6 +83,6 @@ typedef enum {
 - (ZipReadStream *) readCurrentFileInZip;
 - (ZipReadStream *) readCurrentFileInZipWithPassword:(NSString *)password;
 
-- (void) close;
+- (BOOL) closeWithError:(NSError **)error;
 
 @end

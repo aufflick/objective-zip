@@ -35,17 +35,27 @@
 
 #include "zip.h"
 
+@protocol ZipWriteStreamDelegate;
 
-@interface ZipWriteStream : NSObject {
+@interface ZipWriteStream : NSObject <NSStreamDelegate>
+{
 	NSString *_fileNameInZip;
 
 @private
 	zipFile _zipFile;
 }
 
+@property (nonatomic, assign) id<ZipWriteStreamDelegate>delegate;
+
 - (id) initWithZipFileStruct:(zipFile)zipFile fileNameInZip:(NSString *)fileNameInZip;
 
 - (void) writeData:(NSData *)data;
 - (void) finishedWriting;
+
+@end
+
+@protocol ZipWriteStreamDelegate <NSObject>
+
+- (void)zipWriteStream:(ZipWriteStream *)zws didFinishSuccessfully:(BOOL)success error:(NSError *)error;
 
 @end
